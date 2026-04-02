@@ -46,8 +46,6 @@ class OutboundInfoWidget extends HookConsumerWidget {
           ),
           _buildInfoRow(t.dialogs.proxyInfo.testDelay, '${outboundInfo.urlTestDelay} ms'),
           _buildIpInfo(outboundInfo.ipinfo, ref),
-          _buildInfoRow(t.dialogs.proxyInfo.upload, formatBytes(outboundInfo.upload.toInt())),
-          _buildInfoRow(t.dialogs.proxyInfo.download, formatBytes(outboundInfo.download.toInt())),
           _buildInfoRow(t.dialogs.proxyInfo.isSelected, outboundInfo.isSelected ? '✅' : '❌'),
           _buildInfoRow(t.dialogs.proxyInfo.isGroup, outboundInfo.isGroup ? '✅' : '❌'),
           _buildInfoRow(t.dialogs.proxyInfo.isSecure, outboundInfo.isSecure ? '✅' : '❌'),
