@@ -27,7 +27,6 @@ enum ProxiesSort {
     ProxiesSort.unsorted => t.pages.proxies.sortOptions.unsorted,
     ProxiesSort.name => t.pages.proxies.sortOptions.name,
     ProxiesSort.delay => t.pages.proxies.sortOptions.delay,
-    ProxiesSort.usage => t.pages.proxies.sortOptions.usage,
   };
 }
 
