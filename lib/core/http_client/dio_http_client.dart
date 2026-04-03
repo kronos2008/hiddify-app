@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
@@ -47,14 +46,9 @@ class DioHttpClient with InfraLogger {
         },
       );
     }
-
-    if (debug) {
-      // _dio.interceptors.add(LoggyDioInterceptor(requestHeader: true));
-    }
   }
 
   int port = 0;
-
   String userAgent;
 
   Future<bool> isPortOpen(String host, int port, {Duration timeout = const Duration(seconds: 5)}) async {
@@ -76,24 +70,20 @@ class DioHttpClient with InfraLogger {
 
   Future<Map<String, String>> _deviceHeaders() async {
     try {
-      final deviceInfo = DeviceInfoPlugin();
+      final hwid = md5.convert(utf8.encode(Platform.operatingSystemVersion)).toString();
       if (Platform.isAndroid) {
-        final info = await deviceInfo.androidInfo;
-        final hwid = md5.convert(utf8.encode(info.id)).toString();
         return {
           'hwid': hwid,
           'device_os': 'android',
-          'device_model': info.model,
-          'os_version': info.version.release,
+          'device_model': Platform.operatingSystem,
+          'os_version': Platform.operatingSystemVersion,
         };
       } else if (Platform.isIOS) {
-        final info = await deviceInfo.iosInfo;
-        final hwid = md5.convert(utf8.encode(info.identifierForVendor ?? 'unknown')).toString();
         return {
           'hwid': hwid,
           'device_os': 'ios',
-          'device_model': info.model,
-          'os_version': info.systemVersion,
+          'device_model': Platform.operatingSystem,
+          'os_version': Platform.operatingSystemVersion,
         };
       }
     } catch (_) {}
