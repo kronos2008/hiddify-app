@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
@@ -10,9 +11,17 @@ import 'package:hiddify/utils/custom_loggers.dart';
 
 class DioHttpClient with InfraLogger {
   final Map<String, Dio> _dio = {};
-  DioHttpClient({required Duration timeout, required this.userAgent, required bool debug}) {
+
+  int port = 0;
+  String userAgent;
+
+  DioHttpClient({
+    required Duration timeout,
+    required this.userAgent,
+    required bool debug,
+  }) {
     for (var mode in ["proxy", "direct", "both"]) {
-      _dio[mode] = Dio(
+      final dio = Dio(
         BaseOptions(
           connectTimeout: timeout,
           sendTimeout: timeout,
@@ -20,44 +29,57 @@ class DioHttpClient with InfraLogger {
           headers: {"User-Agent": userAgent},
         ),
       );
-      _dio[mode]!.interceptors.add(
+
+      dio.interceptors.add(
         RetryInterceptor(
-          dio: _dio[mode]!,
-          retryDelays: [
-            const Duration(seconds: 1),
-            if (mode != "proxy") ...[const Duration(seconds: 2), const Duration(seconds: 3)],
+          dio: dio,
+          retries: 3,
+          retryDelays: const [
+            Duration(seconds: 1),
+            Duration(seconds: 2),
+            Duration(seconds: 3),
           ],
         ),
       );
 
-      _dio[mode]!.httpClientAdapter = IOHttpClientAdapter(
+      dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client = HttpClient();
+
           client.findProxy = (url) {
             if (mode == "proxy") {
-              return "PROXY localhost:$port";
+              return "PROXY 127.0.0.1:$port";
             } else if (mode == "direct") {
               return "DIRECT";
             } else {
-              return "PROXY localhost:$port; DIRECT";
+              return "PROXY 127.0.0.1:$port; DIRECT";
             }
           };
+
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) => true;
+
           return client;
         },
       );
+
+      _dio[mode] = dio;
     }
   }
 
-  int port = 0;
-  String userAgent;
+  // ========================
+  // 🔌 Проверка порта
+  // ========================
 
-  Future<bool> isPortOpen(String host, int port, {Duration timeout = const Duration(seconds: 5)}) async {
+  Future<bool> isPortOpen(
+    String host,
+    int port, {
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
     try {
       final socket = await Socket.connect(host, port, timeout: timeout);
       await socket.close();
       return true;
-    } on SocketException catch (_) {
-      return false;
     } catch (_) {
       return false;
     }
@@ -65,30 +87,60 @@ class DioHttpClient with InfraLogger {
 
   void setProxyPort(int port) {
     this.port = port;
-    loggy.debug("setting proxy port: [$port]");
+    loggy.debug("Proxy port set: $port");
   }
+
+  // ========================
+  // 📱 DEVICE HEADERS (ФИКС)
+  // ========================
 
   Future<Map<String, String>> _deviceHeaders() async {
     try {
-      final hwid = md5.convert(utf8.encode(Platform.operatingSystemVersion)).toString();
+      final deviceInfo = DeviceInfoPlugin();
+
       if (Platform.isAndroid) {
+        final android = await deviceInfo.androidInfo;
+
+        final raw = "${android.id}-${android.model}-${android.version.sdkInt}";
+        final hwid = md5.convert(utf8.encode(raw)).toString();
+
         return {
           'hwid': hwid,
           'device_os': 'android',
-          'device_model': Platform.operatingSystem,
-          'os_version': Platform.operatingSystemVersion,
+          'device_model': android.model ?? 'unknown',
+          'os_version': android.version.release ?? 'unknown',
         };
-      } else if (Platform.isIOS) {
+      }
+
+      if (Platform.isIOS) {
+        final ios = await deviceInfo.iosInfo;
+
+        final raw =
+            "${ios.identifierForVendor}-${ios.model}-${ios.systemVersion}";
+        final hwid = md5.convert(utf8.encode(raw)).toString();
+
         return {
           'hwid': hwid,
           'device_os': 'ios',
-          'device_model': Platform.operatingSystem,
-          'os_version': Platform.operatingSystemVersion,
+          'device_model': ios.model ?? 'unknown',
+          'os_version': ios.systemVersion ?? 'unknown',
         };
       }
-    } catch (_) {}
-    return {};
+    } catch (e) {
+      loggy.error("Device header error: $e");
+    }
+
+    return {
+      'hwid': 'unknown',
+      'device_os': Platform.operatingSystem,
+      'device_model': 'unknown',
+      'os_version': Platform.operatingSystemVersion,
+    };
   }
+
+  // ========================
+  // 🌐 GET
+  // ========================
 
   Future<Response<T>> get<T>(
     String url, {
@@ -100,16 +152,28 @@ class DioHttpClient with InfraLogger {
     final mode = proxyOnly
         ? "proxy"
         : await isPortOpen("127.0.0.1", port)
-        ? "both"
-        : "direct";
+            ? "both"
+            : "direct";
+
     final dio = _dio[mode]!;
+
+    final headers = await _deviceHeaders();
 
     return dio.get<T>(
       url,
       cancelToken: cancelToken,
-      options: _options(url, userAgent: userAgent, credentials: credentials),
+      options: _options(
+        url,
+        userAgent: userAgent,
+        credentials: credentials,
+        extraHeaders: headers,
+      ),
     );
   }
+
+  // ========================
+  // ⬇️ DOWNLOAD
+  // ========================
 
   Future<Response> download(
     String url,
@@ -122,19 +186,29 @@ class DioHttpClient with InfraLogger {
     final mode = proxyOnly
         ? "proxy"
         : await isPortOpen("127.0.0.1", port)
-        ? "both"
-        : "direct";
+            ? "both"
+            : "direct";
+
     final dio = _dio[mode]!;
 
-    final deviceHeaders = await _deviceHeaders();
+    final headers = await _deviceHeaders();
 
     return dio.download(
       url,
       path,
       cancelToken: cancelToken,
-      options: _options(url, userAgent: userAgent, credentials: credentials, extraHeaders: deviceHeaders),
+      options: _options(
+        url,
+        userAgent: userAgent,
+        credentials: credentials,
+        extraHeaders: headers,
+      ),
     );
   }
+
+  // ========================
+  // ⚙️ OPTIONS
+  // ========================
 
   Options _options(
     String url, {
@@ -145,6 +219,7 @@ class DioHttpClient with InfraLogger {
     final uri = Uri.parse(url);
 
     String? userInfo;
+
     if (credentials != null) {
       userInfo = "${credentials.username}:${credentials.password}";
     } else if (uri.userInfo.isNotEmpty) {
@@ -152,6 +227,7 @@ class DioHttpClient with InfraLogger {
     }
 
     String? basicAuth;
+
     if (userInfo != null) {
       basicAuth = "Basic ${base64.encode(utf8.encode(userInfo))}";
     }
