@@ -36,8 +36,25 @@ jobs:
       - name: Build APK
         run: make android-apk-release
 
+      # 👇 ВАЖНО: смотрим где реально APK
+      - name: Debug files
+        run: |
+          echo "=== DIST ==="
+          ls -R dist || true
+          echo "=== BUILD ==="
+          ls -R build/app/outputs || true
+
+      # 👇 Копируем APK в одну папку
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          cp -r dist/*.apk out/ 2>/dev/null || true
+          cp -r dist/**/*.apk out/ 2>/dev/null || true
+          cp build/app/outputs/flutter-apk/*.apk out/ 2>/dev/null || true
+
+      # 👇 Загружаем ВСЁ что нашли
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: hiddify-app
-          path: dist/**/*.apk
+          path: out
