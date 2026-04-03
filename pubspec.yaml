@@ -5,10 +5,6 @@ version: 4.1.2+40102
 
 environment:
   sdk: ^3.10.4
-  # ! IMPORTANT !
-  # This SDK version is strictly required and must not be removed.
-  # It is parsed/grep-ed by Makefile and Dockerfile to configure the build environment.
-  # Ensure this matches the target Flutter version.
   flutter: ^3.38.5
   
 dependencies:
@@ -17,10 +13,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
-
-  # lucy_editor: ^1.0.5
-  # re_highlight: ^0.0.3
-  # json_editor_flutter: ^1.4.2
 
   slang: ^4.8.1
   slang_flutter: ^4.8.0
@@ -34,20 +26,19 @@ dependencies:
   drift: ^2.21.0
   drift_flutter: ^0.2.1
   shared_preferences: ^2.5.2
-  # shared_preferences_android: ^2.4.8
   dio: ^5.4.1
   ffi: ^2.1.2
   path_provider: ^2.1.1
   mobile_scanner: ^7.2.0
-  # protocol_handler: ^0.2.0
   flutter_native_splash: ^2.3.10
   share_plus: ^10.1.0
   window_manager: ^0.5.0
   tray_manager: ^0.5.0
-  # get list of connected monitors (on Desktops), including their size and position
   screen_retriever: ^0.2.0
 
   package_info_plus: ^8.1.0
+  device_info_plus: ^10.1.0
+  crypto: ^3.0.3
 
   url_launcher: ^6.2.5
   vclibs: ^0.1.2
@@ -71,7 +62,6 @@ dependencies:
   flutter_animate: ^4.5.0
   flutter_svg: ^2.0.10+1
   gap: ^3.0.1
-  # percent_indicator_premium: ^0.0.2
   sliver_tools: ^0.2.12
   font_awesome_flutter: ^10.7.0
   upgrader: ^11.3.0
@@ -86,57 +76,33 @@ dependencies:
   dart_mappable: ^4.2.1
   fluentui_system_icons: ^1.1.229
   json_path: ^0.7.1
-  # permission_handler: ^11.3.0 # is not compatible with windows
-  #flutter_easy_permission: ^1.1.2
-  # flutter_easy_permission:
-  #   git: https://github.com/MichaelStH/flutter_easy_permission.git
   in_app_review: ^2.0.10
-  # circle_flags: ^4.0.2
   circle_flags:
     git: https://github.com/hiddify-com/flutter_circle_flags.git
   fixnum: ^1.1.0
   grpc: ^4.0.1
   bottom_navy_bar: ^6.1.0
-  # # for using protobuf install protoc from this link -> https://github.com/protocolbuffers/protobuf/releases
-  # # then add path to "environment variable" e.g. -> C:\src\protoc-28.3-win64\bin
-  # # then active "protoc_plugin" by running this command -> dart pub global activate protoc_plugin
-  # # then add path to "environment variable" e.g. -> C:\Users\%USERPROFILE%\AppData\Local\Pub\Cache\global_packages\protoc_plugin\bin
   protobuf: ^2.0.0
   dynamic_color: ^1.7.0
   flutter_typeahead: ^5.0.1
-  # flutter_platform_widgets: ^7.0.1
   simple_icons: ^10.1.3
   animated_notch_bottom_bar: ^1.0.0
   basic_utils: 5.7.0
   showcaseview: 3.0.0
   text_scroll: ^0.2.0
   flutter_markdown_plus: ^1.0.6
-  # platform-specific  settings
-  # https://github.com/miguelpruivo/flutter_file_picker/wiki/Setup
   file_picker: ^8.1.7
-  installed_apps: # ^1.5.2
+  installed_apps:
     git: https://github.com/VB10/installed_apps
 
-  # change case of text
-  # for example camelCase to snake_case
-  # helloWorld -> hello_worlds
   recase: ^4.1.0
-  # Used for managing deep links on desktop platforms
-  # platform-specific settings
-  # https://github.com/llfbandit/app_links/tree/master/doc
   app_links: ^6.4.0
-  # Used for registering custom schemes in the Windows registry
   win32: ^5.12.0
-  # Working with Wifi(get LAN IP address)
-  # Web platform not supported
-  # platform-specific settings
   network_info_plus: ^6.1.4
   humanizer: ^3.0.1
   dependency_validator: ^5.0.2
 
 dev_dependencies:
-  # flutter_test:
-  #   sdk: flutter
   lint: ^2.3.0
   build_web_compilers: ^4.0.11
   build_runner: ^2.4.13
@@ -148,14 +114,10 @@ dev_dependencies:
   slang_build_runner: ^4.4.0
   flutter_gen_runner: ^5.4.0
   dart_mappable_builder: ^4.2.1
-  # protoc_builder: ^0.4.1
-  # google_protobuf: ^3.20.1;
 
 flutter:
   uses-material-design: true
   assets:
-    # - assets/core/geoip.db
-    # - assets/core/geosite.db
     - assets/images/logo.svg
     - assets/images/tray_icon.ico
     - assets/images/tray_icon.png
@@ -174,9 +136,6 @@ flutter:
     - family: Shabnam
       fonts:
         - asset: assets/fonts/Shabnam.ttf
-    # - family: Roboto
-    #   fonts:
-    #     - asset: assets/fonts/Roboto.ttf
     - family: Emoji
       fonts:
         - asset: assets/fonts/Emoji.ttf
