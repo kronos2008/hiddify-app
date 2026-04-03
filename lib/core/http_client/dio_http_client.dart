@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
@@ -54,18 +56,7 @@ class DioHttpClient with InfraLogger {
   int port = 0;
 
   String userAgent;
-  // bool isPortOpen(String host, int port, {Duration timeout = const Duration(milliseconds: 200)}) async{
-  //   try {
-  //     Socket.connect(host, port, timeout: timeout).then((socket) {
-  //       socket.destroy();
-  //     });
-  //     return true;
-  //   } on SocketException catch (_) {
-  //     return false;
-  //   } catch (_) {
-  //     return false;
-  //   }
-  // }
+
   Future<bool> isPortOpen(String host, int port, {Duration timeout = const Duration(seconds: 5)}) async {
     try {
       final socket = await Socket.connect(host, port, timeout: timeout);
@@ -81,6 +72,32 @@ class DioHttpClient with InfraLogger {
   void setProxyPort(int port) {
     this.port = port;
     loggy.debug("setting proxy port: [$port]");
+  }
+
+  Future<Map<String, String>> _deviceHeaders() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final info = await deviceInfo.androidInfo;
+        final hwid = md5.convert(utf8.encode(info.id)).toString();
+        return {
+          'hwid': hwid,
+          'device_os': 'android',
+          'device_model': info.model,
+          'os_version': info.version.release,
+        };
+      } else if (Platform.isIOS) {
+        final info = await deviceInfo.iosInfo;
+        final hwid = md5.convert(utf8.encode(info.identifierForVendor ?? 'unknown')).toString();
+        return {
+          'hwid': hwid,
+          'device_os': 'ios',
+          'device_model': info.model,
+          'os_version': info.systemVersion,
+        };
+      }
+    } catch (_) {}
+    return {};
   }
 
   Future<Response<T>> get<T>(
@@ -118,15 +135,23 @@ class DioHttpClient with InfraLogger {
         ? "both"
         : "direct";
     final dio = _dio[mode]!;
+
+    final deviceHeaders = await _deviceHeaders();
+
     return dio.download(
       url,
       path,
       cancelToken: cancelToken,
-      options: _options(url, userAgent: userAgent, credentials: credentials),
+      options: _options(url, userAgent: userAgent, credentials: credentials, extraHeaders: deviceHeaders),
     );
   }
 
-  Options _options(String url, {String? userAgent, ({String username, String password})? credentials}) {
+  Options _options(
+    String url, {
+    String? userAgent,
+    ({String username, String password})? credentials,
+    Map<String, String> extraHeaders = const {},
+  }) {
     final uri = Uri.parse(url);
 
     String? userInfo;
@@ -145,8 +170,7 @@ class DioHttpClient with InfraLogger {
       headers: {
         if (userAgent != null) "User-Agent": userAgent,
         if (basicAuth != null) "authorization": basicAuth,
-        // "Accept": "application/json",
-        // "Content-Type": "application/json",
+        ...extraHeaders,
       },
     );
   }
