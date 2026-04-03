@@ -40,4 +40,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hiddify-app
-          path: out/*.apk
+          path: dist/**/*.apk
